@@ -36,8 +36,14 @@ std::ostream& operator<<(std::ostream& stream, const PosePrior& prior) {
       Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", ", ");
   stream << "PosePrior(position=[" << prior.position.format(kVecFmt)
          << "], position_covariance=["
-         << prior.position_covariance.format(kVecFmt) << "], coordinate_system="
-         << PosePrior::CoordinateSystemToString(prior.coordinate_system) << ")";
+         << prior.position_covariance.format(kVecFmt)
+         << "], rotation=["
+         << prior.rotation.coeffs().format(kVecFmt)  // [x, y, z, w]
+         << "], rotation_covariance=["
+         << prior.rotation_covariance.format(kVecFmt)
+         << "], coordinate_system="
+         << PosePrior::CoordinateSystemToString(prior.coordinate_system)
+         << ")";
   return stream;
 }
 

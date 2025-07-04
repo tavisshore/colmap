@@ -36,6 +36,7 @@
 #include <ostream>
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>  // For Quaterniond
 
 namespace colmap {
 
@@ -52,10 +53,16 @@ struct PosePrior {
       Eigen::Vector3d::Constant(std::numeric_limits<double>::quiet_NaN());
   Eigen::Matrix3d position_covariance =
       Eigen::Matrix3d::Constant(std::numeric_limits<double>::quiet_NaN());
+  // Quaternion rotation (w, x, y, z)
+  Eigen::Quaterniond rotation = Eigen::Quaterniond::Identity();
+  // Rotation covariance (optional, can be removed if not used ?)
+  Eigen::Matrix3d rotation_covariance =
+      Eigen::Matrix3d::Constant(std::numeric_limits<double>::quiet_NaN());
   CoordinateSystem coordinate_system = CoordinateSystem::UNDEFINED;
 
   PosePrior() = default;
-  explicit PosePrior(const Eigen::Vector3d& position) : position(position) {}
+  explicit PosePrior(const Eigen::Vector3d& position)
+      : position(position) {}
   PosePrior(const Eigen::Vector3d& position, const CoordinateSystem system)
       : position(position), coordinate_system(system) {}
   PosePrior(const Eigen::Vector3d& position, const Eigen::Matrix3d& covariance)
@@ -66,10 +73,31 @@ struct PosePrior {
       : position(position),
         position_covariance(covariance),
         coordinate_system(system) {}
+  PosePrior(const Eigen::Vector3d& position,
+            const Eigen::Quaterniond& rotation)
+      : position(position), rotation(rotation) {}
+  PosePrior(const Eigen::Vector3d& position,
+            const Eigen::Quaterniond& rotation,
+            const CoordinateSystem system)
+      : position(position), rotation(rotation), coordinate_system(system) {}
+  PosePrior(const Eigen::Vector3d& position,
+            const Eigen::Quaterniond& rotation,
+            const Eigen::Matrix3d& pos_cov,
+            const Eigen::Matrix3d& rot_cov,
+            const CoordinateSystem system)
+      : position(position),
+        rotation(rotation),
+        position_covariance(pos_cov),
+        rotation_covariance(rot_cov),
+        coordinate_system(system) {}
 
   inline bool IsValid() const { return position.allFinite(); }
   inline bool IsCovarianceValid() const {
     return position_covariance.allFinite();
+  }
+  inline bool IsRotationValid() const { return rotation.norm() > 0.999 && rotation.norm() < 1.001; }
+  inline bool IsRotationCovarianceValid() const {
+    return rotation_covariance.allFinite();
   }
 
   inline bool operator==(const PosePrior& other) const;
@@ -81,7 +109,9 @@ std::ostream& operator<<(std::ostream& stream, const PosePrior& prior);
 bool PosePrior::operator==(const PosePrior& other) const {
   return coordinate_system == other.coordinate_system &&
          position == other.position &&
-         position_covariance == other.position_covariance;
+         position_covariance == other.position_covariance &&
+         rotation.coeffs() == other.rotation.coeffs() && // [x, y, z, w] order
+         rotation_covariance == other.rotation_covariance;
 }
 
 bool PosePrior::operator!=(const PosePrior& other) const {

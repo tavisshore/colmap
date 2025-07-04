@@ -30,6 +30,7 @@
 #include "colmap/geometry/pose_prior.h"
 
 #include <gtest/gtest.h>
+#include <sstream>
 
 namespace colmap {
 namespace {
@@ -38,6 +39,8 @@ TEST(PosePrior, Equals) {
   PosePrior prior;
   prior.position = Eigen::Vector3d::Zero();
   prior.position_covariance = Eigen::Matrix3d::Identity();
+  prior.rotation = Eigen::Quaterniond::Identity();
+  prior.rotation_covariance = Eigen::Matrix3d::Identity();
   prior.coordinate_system = PosePrior::CoordinateSystem::CARTESIAN;
   PosePrior other = prior;
   EXPECT_EQ(prior, other);
@@ -45,18 +48,25 @@ TEST(PosePrior, Equals) {
   EXPECT_NE(prior, other);
   other.position.x() = 1;
   EXPECT_EQ(prior, other);
+  // Check that different rotation is not equal
+  prior.rotation = Eigen::Quaterniond(1, 0, 0, 0); // (w=1, x=0, y=0, z=0)
+  EXPECT_NE(prior, other);
+  other.rotation = Eigen::Quaterniond(1, 0, 0, 0);
+  EXPECT_EQ(prior, other);
 }
 
 TEST(PosePrior, Print) {
   PosePrior prior;
   prior.position = Eigen::Vector3d::Zero();
   prior.position_covariance = Eigen::Matrix3d::Identity();
+  prior.rotation = Eigen::Quaterniond::Identity();
+  prior.rotation_covariance = Eigen::Matrix3d::Identity();
   prior.coordinate_system = PosePrior::CoordinateSystem::CARTESIAN;
   std::ostringstream stream;
   stream << prior;
-  EXPECT_EQ(stream.str(),
-            "PosePrior(position=[0, 0, 0], position_covariance=[1, 0, 0, 0, 1, "
-            "0, 0, 0, 1], coordinate_system=CARTESIAN)");
+  // Compose expected string (Eigen outputs identity quaternion as [0, 0, 0, 1])
+  std::string expected = "PosePrior(position=[0, 0, 0], position_covariance=[1, 0, 0, 0, 1, 0, 0, 0, 1], rotation=[0, 0, 0, 1], rotation_covariance=[1, 0, 0, 0, 1, 0, 0, 0, 1], coordinate_system=CARTESIAN)";
+  EXPECT_EQ(stream.str(), expected);
 }
 
 }  // namespace
