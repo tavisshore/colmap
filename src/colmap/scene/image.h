@@ -45,6 +45,7 @@
 #include <vector>
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 
 namespace colmap {
 
@@ -137,6 +138,10 @@ class Image {
 
   // Extract the viewing direction of the image.
   Eigen::Vector3d ViewingDirection() const;
+
+  // Extract the rotation of the camera in matrix form. - should it be quarternion?
+  Eigen::Vector3d RotationQuat() const;
+
 
   // Reproject the 3D point onto the image in pixels (throws if the camera
   // object was not set). Return null if the 3D point is behind the camera.

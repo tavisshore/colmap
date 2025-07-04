@@ -31,6 +31,7 @@
 
 #include "colmap/geometry/pose.h"
 #include "colmap/scene/projection.h"
+#include <Eigen/Geometry>
 
 namespace colmap {
 
@@ -124,6 +125,10 @@ Eigen::Vector3d Image::ProjectionCenter() const {
 
 Eigen::Vector3d Image::ViewingDirection() const {
   return CamFromWorld().rotation.toRotationMatrix().row(2);
+}
+
+Eigen::Quaterniond Image::RotationQuat() const {
+  return CamFromWorld().rotation.toRotationQuat();
 }
 
 std::optional<Eigen::Vector2d> Image::ProjectPoint(

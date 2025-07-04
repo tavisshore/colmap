@@ -139,6 +139,9 @@ struct BundleAdjustmentOptions {
   bool refine_sensor_from_rig = true;
   bool refine_rig_from_world = true;
 
+  // Whether to utilise rotation 
+  bool use_rotation_prior = true;
+
   // Whether to print a final summary.
   bool print_summary = true;
 

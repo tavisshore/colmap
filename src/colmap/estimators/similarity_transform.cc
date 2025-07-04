@@ -110,4 +110,54 @@ EstimateSim3dRobust(const std::vector<Eigen::Vector3d>& src,
   return report;
 }
 
+
+
+
+
+
+
+
+
+// Custom for rotations
+
+// Robust estimation of Sim3d (similarity transform) using both positions and rotations with RANSAC.
+typename RANSAC<SimilarityTransformWithRotationEstimator<3, true>>::Report
+EstimateSim3dWithRotationRobust(
+    const std::vector<Eigen::Vector3d>& src_positions,
+    const std::vector<Eigen::Vector3d>& tgt_positions,
+    const std::vector<Eigen::Quaterniond>& src_rotations,
+    const std::vector<Eigen::Quaterniond>& tgt_rotations,
+    const RANSACOptions& options,
+    Sim3d& tgt_from_src)
+{
+    // Implement your robust estimation logic here.
+    // For now: placeholder/stub
+    Eigen::Matrix3x4d sim3_mat = Eigen::Matrix3x4d::Zero();
+    auto report = EstimateRigidOrSim3dWithRotationRobust<true>(
+        src_positions, tgt_positions, src_rotations, tgt_rotations, options, sim3_mat);
+    tgt_from_src = Sim3d::FromMatrix(sim3_mat);
+    return report;
+}
+
+// Non-robust estimation of Sim3d using both positions and rotations.
+bool EstimateSim3dWithRotation(
+    const std::vector<Eigen::Vector3d>& src_positions,
+    const std::vector<Eigen::Vector3d>& tgt_positions,
+    const std::vector<Eigen::Quaterniond>& src_rotations,
+    const std::vector<Eigen::Quaterniond>& tgt_rotations,
+    Sim3d& tgt_from_src)
+{
+    // Implement your direct estimation logic here.
+    // For now: placeholder/stub
+    Eigen::Matrix3x4d sim3_mat = Eigen::Matrix3x4d::Zero();
+    bool success = EstimateRigidOrSim3dWithRotation(
+        src_positions, tgt_positions, src_rotations, tgt_rotations, sim3_mat);
+    tgt_from_src = Sim3d::FromMatrix(sim3_mat);
+    return success;
+}
+
+
+
+
+
 }  // namespace colmap

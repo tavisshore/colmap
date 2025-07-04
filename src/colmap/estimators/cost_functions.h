@@ -532,6 +532,57 @@ class CovarianceWeightedCostFunctor {
   const CostFunctor cost_;
 };
 
+template <class CostFunctor, int kNumPosition, int kNumRotation>
+class DualCovarianceWeightedCostFunctor {
+ public:
+  static constexpr int kNumResiduals = kNumPosition + kNumRotation;
+  using kParameterDims = typename CostFunctor::kParameterDims;
+
+  using CovMatPos = Eigen::Matrix<double, kNumPosition, kNumPosition>;
+  using CovMatRot = Eigen::Matrix<double, kNumRotation, kNumRotation>;
+  using CovMatFull = Eigen::Matrix<double, kNumResiduals, kNumResiduals>;
+
+  template <typename... Args>
+  explicit DualCovarianceWeightedCostFunctor(const CovMatPos& cov_pos,
+                                          const CovMatRot& cov_rot,
+                                          Args&&... args)
+      : left_sqrt_info_(BuildBlockSqrtInformation(cov_pos, cov_rot)),
+        cost_(std::forward<Args>(args)...) {}
+
+  template <typename... Args>
+  static ceres::CostFunction* Create(const CovMatPos& cov_pos,
+                                     const CovMatRot& cov_rot,
+                                     Args&&... args) {
+    return CreateAutoDiffCostFunction(
+        new DualCovarianceWeightedCostFunctor<CostFunctor, kNumPosition, kNumRotation>(
+            cov_pos, cov_rot, std::forward<Args>(args)...));
+  }
+
+  template <typename... Args>
+  bool operator()(Args... args) const {
+    if (!cost_(args...)) {
+      return false;
+    }
+
+    auto residuals_ptr = LastValueParameterPack(args...);
+    typedef typename std::remove_reference<decltype(*residuals_ptr)>::type T;
+    Eigen::Map<Eigen::Matrix<T, kNumResiduals, 1>> residuals(residuals_ptr);
+    residuals.applyOnTheLeft(left_sqrt_info_.template cast<T>());
+    return true;
+  }
+
+ private:
+  CovMatFull BuildBlockSqrtInformation(const CovMatPos& cov_pos, const CovMatRot& cov_rot) {
+    CovMatFull sqrt_info = CovMatFull::Zero();
+    sqrt_info.block(0, 0, kNumPosition, kNumPosition) = cov_pos.inverse().llt().matrixL().transpose();
+    sqrt_info.block(kNumPosition, kNumPosition, kNumRotation, kNumRotation) = cov_rot.inverse().llt().matrixL().transpose();
+    return sqrt_info;
+  }
+
+  const CovMatFull left_sqrt_info_;
+  const CostFunctor cost_;
+};
+
 template <template <typename> class CostFunctor, typename... Args>
 ceres::CostFunction* CreateCameraCostFunction(
     const CameraModelId camera_model_id, Args&&... args) {

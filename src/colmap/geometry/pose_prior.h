@@ -91,6 +91,9 @@ struct PosePrior {
   inline bool IsCovarianceValid() const {
     return position_covariance.allFinite();
   }
+  inline bool AreCovarianceValid() const {
+    return position_covariance.allFinite() && rotation_covariance.allFinite();
+  }
   inline bool IsRotationValid() const { return rotation.norm() > 0.999 && rotation.norm() < 1.001; }
   inline bool IsRotationCovarianceValid() const {
     return rotation_covariance.allFinite();

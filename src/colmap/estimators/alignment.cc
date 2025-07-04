@@ -237,7 +237,7 @@ bool AlignReconstructionToLocations(
   return true;
 }
 
-bool AlignReconstructionToPosePriors(
+bool AlignReconstructionToPositionPriors(
     const Reconstruction& src_reconstruction,
     const std::unordered_map<image_t, PosePrior>& tgt_pose_priors,
     const RANSACOptions& ransac_options,
@@ -267,6 +267,63 @@ bool AlignReconstructionToPosePriors(
   }
   return EstimateSim3d(src, tgt, *tgt_from_src);
 }
+
+bool AlignReconstructionToPosePriors(
+    const Reconstruction& src_reconstruction,
+    const std::unordered_map<image_t, PosePrior>& tgt_pose_priors,
+    const RANSACOptions& ransac_options,
+    Sim3d* tgt_from_src) {
+  std::vector<Eigen::Vector3d> src_positions;
+  std::vector<Eigen::Vector3d> tgt_positions;
+  std::vector<Eigen::Quaterniond> src_rotations;
+  std::vector<Eigen::Quaterniond> tgt_rotations;
+  src_positions.reserve(tgt_pose_priors.size());
+  tgt_positions.reserve(tgt_pose_priors.size());
+  src_rotations.reserve(tgt_pose_priors.size());
+  tgt_rotations.reserve(tgt_pose_priors.size());
+
+  for (const image_t image_id : src_reconstruction.RegImageIds()) {
+    const auto pose_prior_it = tgt_pose_priors.find(image_id);
+    if (pose_prior_it != tgt_pose_priors.end() &&
+        pose_prior_it->second.IsValid() &&
+        pose_prior_it->second.IsRotationValid() &&
+        src_reconstruction.Image(image_id).HasPose()) {
+      const auto& image = src_reconstruction.Image(image_id);
+      src_positions.push_back(image.ProjectionCenter());
+      tgt_positions.push_back(pose_prior_it->second.position);
+      src_rotations.push_back(image.RotationQuat());
+      tgt_rotations.push_back(pose_prior_it->second.rotation);
+    }
+  }
+
+  if (src_positions.size() < 3) {
+    LOG(WARNING) << "Not enough valid pose priors for alignment";
+    return false;
+  }
+
+  // If you want to use both translations and rotations for alignment,
+  // you need a custom estimator (not Sim3d) that handles both sets.
+  // Here's a pattern:
+  if (!src_rotations.empty() && src_rotations.size() == src_positions.size()) {
+    // Use a custom function that estimates Sim3d (or SE3) from both translation and rotation pairs
+    if (ransac_options.max_error > 0) {
+      return EstimateSim3dWithRotationRobust(src_positions, tgt_positions,
+                                             src_rotations, tgt_rotations,
+                                             ransac_options, *tgt_from_src).success;
+    }
+    return EstimateSim3dWithRotation(src_positions, tgt_positions,
+                                     src_rotations, tgt_rotations,
+                                     *tgt_from_src);
+  } else {
+    // Fallback: Only positions (legacy behavior)
+    if (ransac_options.max_error > 0) {
+      return EstimateSim3dRobust(src_positions, tgt_positions, ransac_options, *tgt_from_src).success;
+    }
+    return EstimateSim3d(src_positions, tgt_positions, *tgt_from_src);
+  }
+}
+
+
 
 bool AlignReconstructionsViaReprojections(
     const Reconstruction& src_reconstruction,
