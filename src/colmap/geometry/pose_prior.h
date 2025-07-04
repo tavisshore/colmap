@@ -36,7 +36,7 @@
 #include <ostream>
 
 #include <Eigen/Core>
-#include <Eigen/Geometry>  // For Quaterniond
+#include <Eigen/Geometry>  
 
 namespace colmap {
 
@@ -49,15 +49,10 @@ struct PosePrior {
                   CARTESIAN   // = 1
   );
 
-  Eigen::Vector3d position =
-      Eigen::Vector3d::Constant(std::numeric_limits<double>::quiet_NaN());
-  Eigen::Matrix3d position_covariance =
-      Eigen::Matrix3d::Constant(std::numeric_limits<double>::quiet_NaN());
-  // Quaternion rotation (w, x, y, z)
+  Eigen::Vector3d position = Eigen::Vector3d::Constant(std::numeric_limits<double>::quiet_NaN());
+  Eigen::Matrix3d position_covariance = Eigen::Matrix3d::Constant(std::numeric_limits<double>::quiet_NaN());
   Eigen::Quaterniond rotation = Eigen::Quaterniond::Identity();
-  // Rotation covariance (optional, can be removed if not used ?)
-  Eigen::Matrix3d rotation_covariance =
-      Eigen::Matrix3d::Constant(std::numeric_limits<double>::quiet_NaN());
+  Eigen::Matrix3d rotation_covariance = Eigen::Matrix3d::Constant(std::numeric_limits<double>::quiet_NaN());
   CoordinateSystem coordinate_system = CoordinateSystem::UNDEFINED;
 
   PosePrior() = default;
@@ -80,15 +75,16 @@ struct PosePrior {
             const Eigen::Quaterniond& rotation,
             const CoordinateSystem system)
       : position(position), rotation(rotation), coordinate_system(system) {}
+  // Full constructor: the order below now matches the declaration order
   PosePrior(const Eigen::Vector3d& position,
             const Eigen::Quaterniond& rotation,
-            const Eigen::Matrix3d& pos_cov,
-            const Eigen::Matrix3d& rot_cov,
+            const Eigen::Matrix3d& position_covariance,
+            const Eigen::Matrix3d& rotation_covariance,
             const CoordinateSystem system)
       : position(position),
+        position_covariance(position_covariance),
         rotation(rotation),
-        position_covariance(pos_cov),
-        rotation_covariance(rot_cov),
+        rotation_covariance(rotation_covariance),
         coordinate_system(system) {}
 
   inline bool IsValid() const { return position.allFinite(); }
